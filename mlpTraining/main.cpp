@@ -13,19 +13,34 @@ using namespace cv::ml;
 
 bool get_data(string filename, int num_features, int &num_samples, Mat &_data, Mat &_response);
 inline TermCriteria TC(int iters, double eps);
-bool trainMLP();
+bool trainMLP(string dataPath, string modelPath);
 
 int main(int argc, char **argv)
 {
 	const String keys =
-		"{help h usage ?	|				| print this message		}"
-		"{train				|				| training mode				}"
-		"{predict			|				| prediction mode			}"
-		"{modelfile			| model.xml     | path to model file        }"
-		"{datafile		    | Results.txt   | path to data file         }"
+		"{help h usage ?|| print this message}"
+		"{train         || training mode				}"
+		"{modelfile     | model.xml | path to model file        }"
+		"{datafile      | Results.txt | path to data file         }"
 		;
 
+	bool train = false;
+
 	CommandLineParser parser(argc, argv, keys);
+	if (parser.has("train"))
+	{
+		train = true;
+	}
+	string modelpath = parser.get<string>("modelfile");
+	string datapath = parser.get<string>("datafile");
+
+	cout << train << endl;
+	cout << modelpath << endl;
+	cout << datapath << endl;
+
+	if (train)
+		if (trainMLP(datapath, modelpath))
+			cout << "Model training successful" << endl;
 
 	if (parser.has("help"))
 	{
@@ -88,13 +103,14 @@ inline TermCriteria TC(int iters, double eps)
 	return TermCriteria(TermCriteria::MAX_ITER + (eps > 0 ? TermCriteria::EPS : 0), iters, eps);
 }
 
-bool trainMLP()
+bool trainMLP(string dataPath, string modelPath)
 {
 	int num_samples;
 	int class_count = 3;
 	Mat data;
 	Mat response;
-	get_data("Results.txt", 48, num_samples, data, response);
+	if (!get_data(dataPath, 48, num_samples, data, response))
+		return false;
 
 	Ptr<TrainData> tdata = TrainData::create(data, ROW_SAMPLE, response);
 
@@ -123,11 +139,7 @@ bool trainMLP()
 	model->setTermCriteria(TC(max_iter, 0));
 	model->setTrainMethod(method, method_param);
 	model->train(tdata);
-	//model->save("test1");
-	cout << endl;
-	Mat sample = data.row(32);
-	float r = model->predict(sample);
-	cout << r << endl;
+	model->save(modelPath);
 
-	return 0;
+	return true;
 }
