@@ -14,6 +14,7 @@ using namespace cv::ml;
 bool get_data(string filename, int num_features, int &num_samples, Mat &_data, Mat &_response);
 inline TermCriteria TC(int iters, double eps);
 bool trainMLP(string dataPath, string modelPath);
+bool predictMLP(string dataPath, string modelPath);
 
 int main(int argc, char **argv)
 {
@@ -39,8 +40,15 @@ int main(int argc, char **argv)
 	cout << datapath << endl;
 
 	if (train)
+	{
 		if (trainMLP(datapath, modelpath))
 			cout << "Model training successful" << endl;
+	}
+	else
+	{
+		if (predictMLP(datapath, modelpath))
+			cout << "Model prediction successful" << endl;
+	}
 
 	if (parser.has("help"))
 	{
@@ -140,6 +148,29 @@ bool trainMLP(string dataPath, string modelPath)
 	model->setTrainMethod(method, method_param);
 	model->train(tdata);
 	model->save(modelPath);
+
+	return true;
+}
+
+bool predictMLP(string dataPath, string modelPath)
+{
+	int num_samples;
+	int class_count = 3;
+	Mat data;
+	Mat response;
+	if (!get_data(dataPath, 48, num_samples, data, response))
+		return false;
+
+
+	Ptr<ANN_MLP> model = StatModel::load<ANN_MLP>(modelPath);
+
+	if (model.empty())
+		return false;
+
+	Mat pred_response(0, 1, CV_32F);
+
+	for (int i = 0; i < data.rows; ++i)
+		pred_response.push_back(model->predict(data.row(i)));
 
 	return true;
 }
