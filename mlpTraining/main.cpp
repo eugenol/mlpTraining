@@ -11,10 +11,11 @@ using namespace std;
 using namespace cv;
 using namespace cv::ml;
 
-bool get_data(string filename, int num_features, int &num_samples, Mat &_data, Mat &_response);
+bool get_data(string filename, int num_features, int &num_samples, Mat &_data, Mat &_response, Mat &_class_response);
 inline TermCriteria TC(int iters, double eps);
-bool trainMLP(string dataPath, string modelPath);
+bool trainMLP(string dataPath, string modelPath, string nodeconfig);
 bool predictMLP(string dataPath, string modelPath);
+int * getnodeconfig(int input_nodes, string nodeconfig, int output_nodes, int &num_layers);
 
 int main(int argc, char **argv)
 {
@@ -23,6 +24,7 @@ int main(int argc, char **argv)
 		"{train         || training mode				}"
 		"{modelfile     | model.xml | path to model file        }"
 		"{datafile      | Results.txt | path to data file         }"
+		"{nodeconfig    | 2 100 100 | node configuration         }"
 		;
 
 	bool train = false;
@@ -34,6 +36,8 @@ int main(int argc, char **argv)
 	}
 	string modelpath = parser.get<string>("modelfile");
 	string datapath = parser.get<string>("datafile");
+	string nodeconfig = parser.get<string>("nodeconfig");
+
 
 	cout << train << endl;
 	cout << modelpath << endl;
@@ -41,7 +45,7 @@ int main(int argc, char **argv)
 
 	if (train)
 	{
-		if (trainMLP(datapath, modelpath))
+		if (trainMLP(datapath, modelpath, nodeconfig))
 			cout << "Model training successful" << endl;
 	}
 	else
@@ -59,7 +63,7 @@ int main(int argc, char **argv)
 	return 0;
 }
 
-bool get_data(string filename, int num_features, int &num_samples, Mat &_data, Mat &_response)
+bool get_data(string filename, int num_features, int &num_samples, Mat &_data, Mat &_response, Mat &_class_response)
 {
 	ifstream file(filename);
 	string str;
@@ -72,6 +76,7 @@ bool get_data(string filename, int num_features, int &num_samples, Mat &_data, M
 
 	Mat response(0, class_count, CV_32F);
 	Mat t_data(0, num_features, CV_32F);
+	Mat class_response(0, 1, CV_32F);
 
 	if (!file)
 	{
@@ -88,7 +93,7 @@ bool get_data(string filename, int num_features, int &num_samples, Mat &_data, M
 		temp >> class_entry;
 		response_row.at<float>(0, class_entry) = 1.f;
 		response.push_back(response_row);
-		//response.push_back((float)class_entry);
+		class_response.push_back((float)class_entry);
 
 		for (int i = 0; i < num_features; ++i)
 		{
@@ -102,8 +107,27 @@ bool get_data(string filename, int num_features, int &num_samples, Mat &_data, M
 
 	Mat(response).copyTo(_response);
 	Mat(t_data).copyTo(_data);
+	Mat(class_response).copyTo(_class_response);
 
 	return true;
+}
+
+int * getnodeconfig(int input_nodes, string nodeconfig, int output_nodes, int &num_layers)
+{
+	istringstream ss(nodeconfig);
+	int inner_nodes;
+	ss >> inner_nodes;
+	int *nodes = new int[inner_nodes + 2];
+
+	for (int i = 1; i < inner_nodes + 2 - 1; ++i)
+		ss >> nodes[i];
+
+	nodes[0] = input_nodes;
+	nodes[inner_nodes + 2 - 1] = output_nodes;
+
+	num_layers = inner_nodes + 2;
+
+	return nodes;
 }
 
 inline TermCriteria TC(int iters, double eps)
@@ -111,21 +135,24 @@ inline TermCriteria TC(int iters, double eps)
 	return TermCriteria(TermCriteria::MAX_ITER + (eps > 0 ? TermCriteria::EPS : 0), iters, eps);
 }
 
-bool trainMLP(string dataPath, string modelPath)
+bool trainMLP(string dataPath, string modelPath, string nodeconfig)
 {
 	int num_samples;
 	int class_count = 3;
 	Mat data;
 	Mat response;
-	if (!get_data(dataPath, 48, num_samples, data, response))
+	Mat class_response;
+	if (!get_data(dataPath, 48, num_samples, data, response, class_response))
 		return false;
 
 	Ptr<TrainData> tdata = TrainData::create(data, ROW_SAMPLE, response);
 
 	Ptr<ANN_MLP> model;
 
-	int layer_sz[] = { data.cols, 100, 100, class_count };
-	int nlayers = (int)(sizeof(layer_sz) / sizeof(layer_sz[0]));
+	//int layer_sz[] = { data.cols, 100, 100, class_count };
+	//int nlayers = (int)(sizeof(layer_sz) / sizeof(layer_sz[0]));
+	int nlayers;
+	int * layer_sz = getnodeconfig(data.cols, nodeconfig, class_count, nlayers);
 	Mat layer_sizes(1, nlayers, CV_32S, layer_sz);
 
 #if 1
@@ -158,9 +185,9 @@ bool predictMLP(string dataPath, string modelPath)
 	int class_count = 3;
 	Mat data;
 	Mat response;
-	if (!get_data(dataPath, 48, num_samples, data, response))
+	Mat class_response;
+	if (!get_data(dataPath, 48, num_samples, data, response, class_response))
 		return false;
-
 
 	Ptr<ANN_MLP> model = StatModel::load<ANN_MLP>(modelPath);
 
@@ -171,6 +198,12 @@ bool predictMLP(string dataPath, string modelPath)
 
 	for (int i = 0; i < data.rows; ++i)
 		pred_response.push_back(model->predict(data.row(i)));
+
+	for (int i = 0; i < class_response.rows; ++i)
+	{
+		cout << class_response.at<float>(i, 0) << " " << pred_response.at<float>(i, 0) << endl;
+	}
+
 
 	return true;
 }
