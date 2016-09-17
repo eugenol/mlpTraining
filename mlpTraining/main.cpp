@@ -224,6 +224,11 @@ void calcResults(Mat pred, Mat resp)
 	array<int, 3> TrueNegative = { 0 };
 	array<int, 3> FalseNegative = { 0 };
 	array<array<int, 3>, 3> matrix = { 0 };
+	array<float, 3> FPrate = { 0 };
+	array<float, 3> TPrate = { 0 };
+	array<float, 3> Precision = { 0 };
+	array<float, 3> Accuracy = { 0 };
+	array<float, 3> Fscore = { 0 };
 
 	for(int i=0;i<pred.rows; ++i)
 	{
@@ -342,7 +347,16 @@ void calcResults(Mat pred, Mat resp)
 
 	}
 
+	for (int i = 0; i < 3; ++i)
+	{
+		FPrate[i] = FalsePositive[i] / ((float)(FalsePositive[i] + TrueNegative[i]));
+		TPrate[i] = TruePositive[i] / ((float)(TruePositive[i] + FalseNegative[i]));
+		Precision[i] = TruePositive[i] / ((float)(TruePositive[i] + FalsePositive[i]));
+		Fscore[i] = Precision[i] * TPrate[i];
+		Accuracy[i] = (TruePositive[i] + TrueNegative[i]) / ((float)(TruePositive[i] + FalsePositive[i] + FalseNegative[i] + TrueNegative[i]));
+	}
 
+	
 	for (int i = 0; i < 3; ++i)
 	{
 		cout << i << " " << "TP: " << TruePositive[i] << " FP: " << FalsePositive[i] << " TN: " << TrueNegative[i] << " FN: " << FalseNegative[i] << endl;
