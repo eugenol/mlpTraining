@@ -277,61 +277,84 @@ void calcResults(Mat pred, Mat resp)
 
 	for (int i = 0; i < true_responses.size(); i++)
 	{
-		//for (int j = 0; j < predicted_responses.size(); j++)
-		//{
-			matrix[true_responses[i]][predicted_responses[i]]++;
-		//}
+		matrix[true_responses[i]][predicted_responses[i]]++;
+	}
+
+	for (int i = 0; i < true_responses.size(); i++)
+	{
+		if (true_responses[i] == 0)
+		{
+			if (predicted_responses[i] == 0)
+			{
+				TruePositive[0]++;
+				TrueNegative[1]++;
+				TrueNegative[2]++;
+			}
+			else if (predicted_responses[i] == 1)
+			{
+				FalseNegative[0]++;
+				FalsePositive[1]++;
+			}
+			else if (predicted_responses[i] == 2)
+			{
+				FalseNegative[0]++;
+				FalsePositive[2]++;
+			}
+		}
+		else if (true_responses[i] == 1)
+		{
+			if (predicted_responses[i] == 1)
+			{
+				TruePositive[1]++;
+				TrueNegative[0]++;
+				TrueNegative[2]++;
+			}
+			else if (predicted_responses[i] == 0)
+			{
+				FalseNegative[1]++;
+				FalsePositive[0]++;
+			}
+			else if (predicted_responses[i] == 2)
+			{
+				FalseNegative[1]++;
+				FalsePositive[2]++;
+			}
+		}
+		else if (true_responses[i] == 2)
+		{
+			if (predicted_responses[i] == 2)
+			{
+				TruePositive[2]++;
+				TrueNegative[0]++;
+				TrueNegative[1]++;
+			}
+			else if (predicted_responses[i] == 0)
+			{
+				FalseNegative[2]++;
+				FalsePositive[0]++;
+			}
+			else if (predicted_responses[i] == 1)
+			{
+				FalseNegative[2]++;
+				FalsePositive[1]++;
+			}
+		}
+
 	}
 
 
 	for (int i = 0; i < 3; ++i)
 	{
-		cout << i << " " << "TP: " << TruePositive[i] << " FP: " << FalsePositive[i] << " TN: " << TrueNegative[i] << " FN: " << TrueNegative[i] << endl;
+		cout << i << " " << "TP: " << TruePositive[i] << " FP: " << FalsePositive[i] << " TN: " << TrueNegative[i] << " FN: " << FalseNegative[i] << endl;
 	}
 
-		//for (int i = 0; i < resp.rows; ++i)
-		//{
-		//	int k, l;
-		//		if (abs(resp.at<float>(i, 0) - 0) < 0.1) //class 0
-		//		{
-		//			k = 0;
-		//		}
-		//		else if (abs(resp.at<float>(i, 0) - 1) < 0.1)
-		//		{
-		//			k = 1;
-		//		}
-		//		else if (abs(resp.at<float>(i, 0) - 2) < 0.1)
-		//		{
-		//			k = 2;
-		//		}
-
-		//		for (int j = 0; j < pred.rows; ++j)
-		//		{
-		//			if (abs(pred.at<float>(i, 0) - 0) < 0.1) //class 0
-		//			{
-		//				l = 0;
-		//			}
-		//			else if (abs(pred.at<float>(i, 0) - 1) < 0.1)
-		//			{
-		//				l = 1;
-		//			}
-		//			else if (abs(pred.at<float>(i, 0) - 2) < 0.1)
-		//			{
-		//				l = 2;
-		//			}
-
-		//			matrix[k][l]++;
-		//		}
-
-		//}
-
-		for (int i = 0; i < 3; ++i)
+	for (int i = 0; i < 3; ++i)
+	{
+		for (int j = 0; j < 3; ++j)
 		{
-			for (int j = 0; j < 3; ++j)
-			{
-				cout << matrix[i][j] << " ";
-			}
-			cout << endl;
+			cout << matrix[i][j] << " ";
 		}
+		cout << endl;
+	}
 
 }
