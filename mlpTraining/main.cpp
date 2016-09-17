@@ -114,7 +114,7 @@ bool get_data(string filename, int num_features, int &num_samples, Mat &_data, M
 		for (int i = 0; i < num_features; ++i)
 		{
 			temp >> data_entry;
-			data_row.at<float>(0, i++) = data_entry;
+			data_row.at<float>(0, i) = data_entry;
 		}
 
 		t_data.push_back(data_row);
