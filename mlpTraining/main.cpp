@@ -6,6 +6,8 @@
 
 #include <fstream>
 #include <sstream>
+#include <vector>
+#include <array>
 
 using namespace std;
 using namespace cv;
@@ -16,6 +18,7 @@ inline TermCriteria TC(int iters, double eps);
 bool trainMLP(string dataPath, string modelPath, string nodeconfig);
 bool predictMLP(string dataPath, string modelPath);
 int * getnodeconfig(int input_nodes, string nodeconfig, int output_nodes, int &num_layers);
+void calcResults(Mat pred, Mat resp);
 
 int main(int argc, char **argv)
 {
@@ -45,8 +48,12 @@ int main(int argc, char **argv)
 
 	if (train)
 	{
+		double start = (double)getTickCount();
 		if (trainMLP(datapath, modelpath, nodeconfig))
 			cout << "Model training successful" << endl;
+		double end = (double)getTickCount();
+		double  trainTime = (end - start) / (getTickFrequency());
+		cout << "Model Training Took " << trainTime << " seconds" << endl;
 	}
 	else
 	{
@@ -165,8 +172,6 @@ bool trainMLP(string dataPath, string modelPath, string nodeconfig)
 	int max_iter = 1000;
 #endif
 
-	//Ptr<TrainData> tdata = TrainData::create(train_data, ROW_SAMPLE, train_responses);
-
 	cout << "Training the classifier (may take a few minutes)...\n";
 	model = ANN_MLP::create();
 	model->setLayerSizes(layer_sizes);
@@ -199,11 +204,134 @@ bool predictMLP(string dataPath, string modelPath)
 	for (int i = 0; i < data.rows; ++i)
 		pred_response.push_back(model->predict(data.row(i)));
 
-	for (int i = 0; i < class_response.rows; ++i)
+	//for (int i = 0; i < class_response.rows; ++i)
+	//{
+	//	cout << class_response.at<float>(i, 0) << " " << pred_response.at<float>(i, 0) << endl;
+	//}
+
+	calcResults(pred_response, class_response);
+
+	return true;
+}
+
+void calcResults(Mat pred, Mat resp)
+{
+	vector<int> correct;
+	vector<int> true_responses;
+	vector<int> predicted_responses;
+	array<int, 3> TruePositive = { 0 };
+	array<int, 3> FalsePositive = { 0 };
+	array<int, 3> TrueNegative = { 0 };
+	array<int, 3> FalseNegative = { 0 };
+	array<array<int, 3>, 3> matrix = { 0 };
+
+	for(int i=0;i<pred.rows; ++i)
 	{
-		cout << class_response.at<float>(i, 0) << " " << pred_response.at<float>(i, 0) << endl;
+		correct.push_back(std::abs(pred.at<float>(i) - resp.at<float>(i)) <= FLT_EPSILON ? 1 : 0);
+	}
+
+	for (int i = 0; i < resp.rows; ++i)
+	{
+		cout << resp.at<float>(i, 0) << " " << pred.at<float>(i, 0) <<" " << correct[i] << endl;
+	}
+
+	for (int i = 0; i < resp.rows; ++i)
+	{
+		if (abs(resp.at<float>(i, 0) - 0) < 0.1) //class 0
+		{
+			true_responses.push_back(0);
+		}
+		else if (abs(resp.at<float>(i, 0) - 1) < 0.1)
+		{
+			true_responses.push_back(1);
+		}
+		else if (abs(resp.at<float>(i, 0) - 2) < 0.1)
+		{
+			true_responses.push_back(2);
+		}
+		else
+		{
+			cout << "Error" << endl;
+		}
+	}
+
+	for (int i = 0; i < pred.rows; ++i)
+	{
+		if (abs(pred.at<float>(i, 0) - 0) < 0.1) //class 0
+		{
+			predicted_responses.push_back(0);
+		}
+		else if (abs(pred.at<float>(i, 0) - 1) < 0.1)
+		{
+			predicted_responses.push_back(1);
+		}
+		else if (abs(pred.at<float>(i, 0) - 2) < 0.1)
+		{
+			predicted_responses.push_back(2);
+		}
+		else
+		{
+			cout << "Error" << endl;
+		}
+	}
+
+	for (int i = 0; i < true_responses.size(); i++)
+	{
+		//for (int j = 0; j < predicted_responses.size(); j++)
+		//{
+			matrix[true_responses[i]][predicted_responses[i]]++;
+		//}
 	}
 
 
-	return true;
+	for (int i = 0; i < 3; ++i)
+	{
+		cout << i << " " << "TP: " << TruePositive[i] << " FP: " << FalsePositive[i] << " TN: " << TrueNegative[i] << " FN: " << TrueNegative[i] << endl;
+	}
+
+		//for (int i = 0; i < resp.rows; ++i)
+		//{
+		//	int k, l;
+		//		if (abs(resp.at<float>(i, 0) - 0) < 0.1) //class 0
+		//		{
+		//			k = 0;
+		//		}
+		//		else if (abs(resp.at<float>(i, 0) - 1) < 0.1)
+		//		{
+		//			k = 1;
+		//		}
+		//		else if (abs(resp.at<float>(i, 0) - 2) < 0.1)
+		//		{
+		//			k = 2;
+		//		}
+
+		//		for (int j = 0; j < pred.rows; ++j)
+		//		{
+		//			if (abs(pred.at<float>(i, 0) - 0) < 0.1) //class 0
+		//			{
+		//				l = 0;
+		//			}
+		//			else if (abs(pred.at<float>(i, 0) - 1) < 0.1)
+		//			{
+		//				l = 1;
+		//			}
+		//			else if (abs(pred.at<float>(i, 0) - 2) < 0.1)
+		//			{
+		//				l = 2;
+		//			}
+
+		//			matrix[k][l]++;
+		//		}
+
+		//}
+
+		for (int i = 0; i < 3; ++i)
+		{
+			for (int j = 0; j < 3; ++j)
+			{
+				cout << matrix[i][j] << " ";
+			}
+			cout << endl;
+		}
+
 }
