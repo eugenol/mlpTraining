@@ -18,6 +18,7 @@ inline TermCriteria TC(int iters, double eps);
 bool trainMLP(string dataPath, string modelPath, string nodeconfig);
 bool predictMLP(string dataPath, string modelPath);
 int * getnodeconfig(int input_nodes, string nodeconfig, int output_nodes, int &num_layers);
+vector<int> getnodeconfig(int input_nodes, string nodeconfig, int output_nodes);
 void calcResults(Mat pred, Mat resp);
 
 int main(int argc, char **argv)
@@ -119,6 +120,28 @@ bool get_data(string filename, int num_features, int &num_samples, Mat &_data, M
 	return true;
 }
 
+vector<int> getnodeconfig(int input_nodes, string nodeconfig, int output_nodes)
+{
+	vector<int> layer_nodes;
+
+	layer_nodes.push_back(input_nodes);
+
+	istringstream ss(nodeconfig);
+	int inner_nodes;
+	ss >> inner_nodes;
+
+	for (int i = 1; i < inner_nodes + 2 - 1; ++i)
+	{
+		int num_nodes;
+		ss >> num_nodes;
+		layer_nodes.push_back(num_nodes);
+	}
+
+	layer_nodes.push_back(output_nodes);
+
+	return layer_nodes;
+}
+
 int * getnodeconfig(int input_nodes, string nodeconfig, int output_nodes, int &num_layers)
 {
 	istringstream ss(nodeconfig);
@@ -159,8 +182,11 @@ bool trainMLP(string dataPath, string modelPath, string nodeconfig)
 	//int layer_sz[] = { data.cols, 100, 100, class_count };
 	//int nlayers = (int)(sizeof(layer_sz) / sizeof(layer_sz[0]));
 	int nlayers;
-	int * layer_sz = getnodeconfig(data.cols, nodeconfig, class_count, nlayers);
-	Mat layer_sizes(1, nlayers, CV_32S, layer_sz);
+	//int * layer_sz = getnodeconfig(data.cols, nodeconfig, class_count, nlayers);
+	//Mat layer_sizes(1, nlayers, CV_32S, layer_sz);
+	vector<int> layer_sz = getnodeconfig(data.cols, nodeconfig, class_count);
+	nlayers = layer_sz.size();
+	//Mat layer_sizes(1, nlayers, CV_32S, layer_sz);
 
 #if 1
 	int method = ANN_MLP::BACKPROP;
@@ -174,7 +200,8 @@ bool trainMLP(string dataPath, string modelPath, string nodeconfig)
 
 	cout << "Training the classifier (may take a few minutes)...\n";
 	model = ANN_MLP::create();
-	model->setLayerSizes(layer_sizes);
+	//model->setLayerSizes(layer_sizes);
+	model->setLayerSizes(layer_sz);
 	model->setActivationFunction(ANN_MLP::SIGMOID_SYM, 0, 0);
 	model->setTermCriteria(TC(max_iter, 0));
 	model->setTrainMethod(method, method_param);
@@ -359,7 +386,18 @@ void calcResults(Mat pred, Mat resp)
 	
 	for (int i = 0; i < 3; ++i)
 	{
-		cout << i << " " << "TP: " << TruePositive[i] << " FP: " << FalsePositive[i] << " TN: " << TrueNegative[i] << " FN: " << FalseNegative[i] << endl;
+		//cout << i << " " << "TP: " << TruePositive[i] << " FP: " << FalsePositive[i] << " TN: " << TrueNegative[i] << " FN: " << FalseNegative[i] << endl;
+		//cout << i << " " << "TP: " << TruePositive[i] << " FP: " << FalsePositive[i] << " TN: " << TrueNegative[i] << " FN: " << FalseNegative[i] << endl;
+		cout << i << ":" << endl;
+		cout << TruePositive[i] << "\t" << FalsePositive[i] << endl;
+		cout << FalseNegative[i] << "\t" << TrueNegative[i] << endl;
+		cout << endl;
+
+		cout << "FP rate: " << FPrate[i] << endl;
+		cout << "TP rate: " << TPrate[i] << endl;
+		cout << "Precision: " << Precision[i] << endl;
+		cout << "F-score: " << Fscore[i] << endl;
+		cout << "Accuracy: " << Accuracy[i] << endl;
 	}
 
 	for (int i = 0; i < 3; ++i)
