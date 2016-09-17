@@ -16,10 +16,10 @@ using namespace cv::ml;
 bool get_data(string filename, int num_features, int &num_samples, Mat &_data, Mat &_response, Mat &_class_response);
 inline TermCriteria TC(int iters, double eps);
 bool trainMLP(string dataPath, string modelPath, string nodeconfig);
-bool predictMLP(string dataPath, string modelPath);
+bool predictMLP(string dataPath, string modelPath, string resFilename);
 //int * getnodeconfig(int input_nodes, string nodeconfig, int output_nodes, int &num_layers);
 vector<int> getnodeconfig(int input_nodes, string nodeconfig, int output_nodes);
-void calcResults(Mat pred, Mat resp);
+void calcResults(Mat pred, Mat resp, string resFilename);
 
 int main(int argc, char **argv)
 {
@@ -28,8 +28,9 @@ int main(int argc, char **argv)
 		"{help h usage ?|| print this message}"
 		"{train         || training mode				}"
 		"{modelfile     | model.xml | path to model file        }"
-		"{datafile      | Results.txt | path to data file         }"
+		"{datafile      | test.txt | path to data file         }"
 		"{nodeconfig    | 2 100 100 | node configuration         }"
+		"{resfilename   | predout.txt| results of prediction}"
 		;
 
 	bool train = false;
@@ -52,6 +53,7 @@ int main(int argc, char **argv)
 	string modelpath = parser.get<string>("modelfile");		//get name of mdel file
 	string datapath = parser.get<string>("datafile");		//get name of data file
 	string nodeconfig = parser.get<string>("nodeconfig");	// get node configuration
+	string resfilename = parser.get<string>("resfilename");	// get node configuration
 
 	if (train)	//training mode
 	{
@@ -71,7 +73,7 @@ int main(int argc, char **argv)
 	else
 	{
 		cout << "Predicton mode" << endl;
-		if (predictMLP(datapath, modelpath))				//call prediction function
+		if (predictMLP(datapath, modelpath, resfilename))				//call prediction function
 			cout << "Model prediction successful" << endl;
 	}
 
@@ -184,6 +186,8 @@ bool trainMLP(string dataPath, string modelPath, string nodeconfig)
 	if (!get_data(dataPath, 48, num_samples, data, response, class_response))
 		return false;
 
+	cout << "Number of samples for training: " << num_samples << endl;
+
 	Ptr<TrainData> tdata = TrainData::create(data, ROW_SAMPLE, response);
 
 	Ptr<ANN_MLP> model;
@@ -198,7 +202,7 @@ bool trainMLP(string dataPath, string modelPath, string nodeconfig)
 #if 1
 	int method = ANN_MLP::BACKPROP;
 	double method_param = 0.001;
-	int max_iter = 300;
+	int max_iter = 1000;//300;
 #else
 	int method = ANN_MLP::RPROP;
 	double method_param = 0.1;
@@ -217,7 +221,7 @@ bool trainMLP(string dataPath, string modelPath, string nodeconfig)
 	return true;
 }
 
-bool predictMLP(string dataPath, string modelPath)
+bool predictMLP(string dataPath, string modelPath, string resFilename)
 {
 	int num_samples;
 	int class_count = 3;
@@ -237,12 +241,12 @@ bool predictMLP(string dataPath, string modelPath)
 	for (int i = 0; i < data.rows; ++i)
 		pred_response.push_back(model->predict(data.row(i)));
 
-	calcResults(pred_response, class_response);
+	calcResults(pred_response, class_response, resFilename);
 
 	return true;
 }
 
-void calcResults(Mat pred, Mat resp)
+void calcResults(Mat pred, Mat resp, string resFilename)
 {
 	vector<int> correct;
 	vector<int> true_responses;
@@ -267,6 +271,8 @@ void calcResults(Mat pred, Mat resp)
 	{
 		cout << resp.at<float>(i, 0) << " " << pred.at<float>(i, 0) <<" " << correct[i] << endl;
 	}
+
+	cout << endl;
 
 	for (int i = 0; i < resp.rows; ++i)
 	{
@@ -390,6 +396,7 @@ void calcResults(Mat pred, Mat resp)
 		//cout << i << " " << "TP: " << TruePositive[i] << " FP: " << FalsePositive[i] << " TN: " << TrueNegative[i] << " FN: " << FalseNegative[i] << endl;
 		//cout << i << " " << "TP: " << TruePositive[i] << " FP: " << FalsePositive[i] << " TN: " << TrueNegative[i] << " FN: " << FalseNegative[i] << endl;
 		cout << i << ":" << endl;
+		cout << endl;
 		cout << TruePositive[i] << "\t" << FalsePositive[i] << endl;
 		cout << FalseNegative[i] << "\t" << TrueNegative[i] << endl;
 		cout << endl;
@@ -399,7 +406,29 @@ void calcResults(Mat pred, Mat resp)
 		cout << "Precision: " << Precision[i] << endl;
 		cout << "F-score: " << Fscore[i] << endl;
 		cout << "Accuracy: " << Accuracy[i] << endl;
+		cout << endl;
 	}
+
+	ofstream outfile(resFilename);
+
+	for (int i = 0; i < 3; ++i)
+	{
+		outfile << i << ":" << endl;
+		outfile << endl;
+		outfile << TruePositive[i] << "\t" << FalsePositive[i] << endl;
+		outfile << FalseNegative[i] << "\t" << TrueNegative[i] << endl;
+		outfile << endl;
+
+		outfile << "FP rate: " << FPrate[i] << endl;
+		outfile << "TP rate: " << TPrate[i] << endl;
+		outfile << "Precision: " << Precision[i] << endl;
+		outfile << "F-score: " << Fscore[i] << endl;
+		outfile << "Accuracy: " << Accuracy[i] << endl;
+		outfile << endl;
+	}
+
+
+	cout << endl;
 
 	for (int i = 0; i < 3; ++i)
 	{
