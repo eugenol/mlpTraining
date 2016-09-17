@@ -17,12 +17,13 @@ bool get_data(string filename, int num_features, int &num_samples, Mat &_data, M
 inline TermCriteria TC(int iters, double eps);
 bool trainMLP(string dataPath, string modelPath, string nodeconfig);
 bool predictMLP(string dataPath, string modelPath);
-int * getnodeconfig(int input_nodes, string nodeconfig, int output_nodes, int &num_layers);
+//int * getnodeconfig(int input_nodes, string nodeconfig, int output_nodes, int &num_layers);
 vector<int> getnodeconfig(int input_nodes, string nodeconfig, int output_nodes);
 void calcResults(Mat pred, Mat resp);
 
 int main(int argc, char **argv)
 {
+	//command line options and default values
 	const String keys =
 		"{help h usage ?|| print this message}"
 		"{train         || training mode				}"
@@ -33,44 +34,51 @@ int main(int argc, char **argv)
 
 	bool train = false;
 
-	CommandLineParser parser(argc, argv, keys);
-	if (parser.has("train"))
-	{
-		train = true;
-	}
-	string modelpath = parser.get<string>("modelfile");
-	string datapath = parser.get<string>("datafile");
-	string nodeconfig = parser.get<string>("nodeconfig");
-
-
-	cout << train << endl;
-	cout << modelpath << endl;
-	cout << datapath << endl;
-
-	if (train)
-	{
-		double start = (double)getTickCount();
-		if (trainMLP(datapath, modelpath, nodeconfig))
-			cout << "Model training successful" << endl;
-		double end = (double)getTickCount();
-		double  trainTime = (end - start) / (getTickFrequency());
-		cout << "Model Training Took " << trainTime << " seconds" << endl;
-	}
-	else
-	{
-		if (predictMLP(datapath, modelpath))
-			cout << "Model prediction successful" << endl;
-	}
+	CommandLineParser parser(argc, argv, keys); //paser object
 
 	if (parser.has("help"))
 	{
-		cout << "It works" << endl;
+		cout << "The usage: mlpTraining.exe [-datafile=<path to training / prediction data>] \\\n"
+			"  [-modelfile=<file for the classifier>] \\\n"
+			"  [-nodeconfig=\"[number of hidden layers] [nodes in layer 1] [nodes in layer 2] [..]..\"] \\\n"
+			"  [-train] # to train. omit for prediction\n" << endl;
 		return 0;
+	}
+
+	if (parser.has("train"))	//check if training or prediction mode
+	{
+		train = true;
+	}
+	string modelpath = parser.get<string>("modelfile");		//get name of mdel file
+	string datapath = parser.get<string>("datafile");		//get name of data file
+	string nodeconfig = parser.get<string>("nodeconfig");	// get node configuration
+
+	if (train)	//training mode
+	{
+		cout << "Training mode" << endl;
+		double start = (double)getTickCount();
+		if (trainMLP(datapath, modelpath, nodeconfig))		//call training function
+		{
+			double end = (double)getTickCount();
+			double  trainTime = (end - start) / (getTickFrequency());
+			cout << "Model training took " << trainTime << " seconds" << endl;	//show elapsed time
+			cout << "Model training successful" << endl;
+		}
+		else
+			cout << "Model training failed" << endl;
+
+	}
+	else
+	{
+		cout << "Predicton mode" << endl;
+		if (predictMLP(datapath, modelpath))				//call prediction function
+			cout << "Model prediction successful" << endl;
 	}
 
 	return 0;
 }
 
+// read features from file
 bool get_data(string filename, int num_features, int &num_samples, Mat &_data, Mat &_response, Mat &_class_response)
 {
 	ifstream file(filename);
@@ -120,6 +128,7 @@ bool get_data(string filename, int num_features, int &num_samples, Mat &_data, M
 	return true;
 }
 
+//parse the node configuration
 vector<int> getnodeconfig(int input_nodes, string nodeconfig, int output_nodes)
 {
 	vector<int> layer_nodes;
@@ -142,23 +151,23 @@ vector<int> getnodeconfig(int input_nodes, string nodeconfig, int output_nodes)
 	return layer_nodes;
 }
 
-int * getnodeconfig(int input_nodes, string nodeconfig, int output_nodes, int &num_layers)
-{
-	istringstream ss(nodeconfig);
-	int inner_nodes;
-	ss >> inner_nodes;
-	int *nodes = new int[inner_nodes + 2];
-
-	for (int i = 1; i < inner_nodes + 2 - 1; ++i)
-		ss >> nodes[i];
-
-	nodes[0] = input_nodes;
-	nodes[inner_nodes + 2 - 1] = output_nodes;
-
-	num_layers = inner_nodes + 2;
-
-	return nodes;
-}
+//int * getnodeconfig(int input_nodes, string nodeconfig, int output_nodes, int &num_layers)
+//{
+//	istringstream ss(nodeconfig);
+//	int inner_nodes;
+//	ss >> inner_nodes;
+//	int *nodes = new int[inner_nodes + 2];
+//
+//	for (int i = 1; i < inner_nodes + 2 - 1; ++i)
+//		ss >> nodes[i];
+//
+//	nodes[0] = input_nodes;
+//	nodes[inner_nodes + 2 - 1] = output_nodes;
+//
+//	num_layers = inner_nodes + 2;
+//
+//	return nodes;
+//}
 
 inline TermCriteria TC(int iters, double eps)
 {
@@ -181,12 +190,10 @@ bool trainMLP(string dataPath, string modelPath, string nodeconfig)
 
 	//int layer_sz[] = { data.cols, 100, 100, class_count };
 	//int nlayers = (int)(sizeof(layer_sz) / sizeof(layer_sz[0]));
-	int nlayers;
+	//int nlayers;
 	//int * layer_sz = getnodeconfig(data.cols, nodeconfig, class_count, nlayers);
 	//Mat layer_sizes(1, nlayers, CV_32S, layer_sz);
-	vector<int> layer_sz = getnodeconfig(data.cols, nodeconfig, class_count);
-	nlayers = layer_sz.size();
-	//Mat layer_sizes(1, nlayers, CV_32S, layer_sz);
+	vector<int> layer_sizes = getnodeconfig(data.cols, nodeconfig, class_count);
 
 #if 1
 	int method = ANN_MLP::BACKPROP;
@@ -200,8 +207,7 @@ bool trainMLP(string dataPath, string modelPath, string nodeconfig)
 
 	cout << "Training the classifier (may take a few minutes)...\n";
 	model = ANN_MLP::create();
-	//model->setLayerSizes(layer_sizes);
-	model->setLayerSizes(layer_sz);
+	model->setLayerSizes(layer_sizes);
 	model->setActivationFunction(ANN_MLP::SIGMOID_SYM, 0, 0);
 	model->setTermCriteria(TC(max_iter, 0));
 	model->setTrainMethod(method, method_param);
@@ -230,11 +236,6 @@ bool predictMLP(string dataPath, string modelPath)
 
 	for (int i = 0; i < data.rows; ++i)
 		pred_response.push_back(model->predict(data.row(i)));
-
-	//for (int i = 0; i < class_response.rows; ++i)
-	//{
-	//	cout << class_response.at<float>(i, 0) << " " << pred_response.at<float>(i, 0) << endl;
-	//}
 
 	calcResults(pred_response, class_response);
 
