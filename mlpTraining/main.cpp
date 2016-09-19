@@ -51,8 +51,9 @@ int main(int argc, char **argv)
 	{
 		cout << "The usage: mlpTraining.exe [-datafile=<path to training / prediction data>] \\\n"
 			"  [-modelfile=<file for the classifier>] \\\n"
-			"  [-nodeconfig=\"[number of hidden layers] [nodes in layer 1] [nodes in layer 2] [..]..\"] \\\n"
-			"  [-train] # to train. omit for prediction\n" << endl;
+			"  [-nodeconfig=\"[number of hidden layers] [nodes in hidden layer 1] [nodes in hidden layer 2] [..]..\"] \\\n"
+			"  [-train] # to train. omit for prediction \\\n"
+			"  [-resfilename=<filename to store results> \\\n" << endl;
 		return 0;
 	}
 
