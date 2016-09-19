@@ -21,6 +21,16 @@ bool predictMLP(string dataPath, string modelPath, string resFilename);
 vector<int> getnodeconfig(int input_nodes, string nodeconfig, int output_nodes);
 void calcResults(Mat pred, Mat resp, string resFilename);
 
+struct pmetrics
+{
+	float FPrate;
+	float TPrate;
+	float Precision;
+	float Fscore;
+	float Accuracy;
+};
+
+
 int main(int argc, char **argv)
 {
 	//command line options and default values
@@ -256,11 +266,12 @@ void calcResults(Mat pred, Mat resp, string resFilename)
 	array<int, 3> TrueNegative = { 0 };
 	array<int, 3> FalseNegative = { 0 };
 	array<array<int, 3>, 3> matrix = { 0 };
-	array<float, 3> FPrate = { 0 };
-	array<float, 3> TPrate = { 0 };
-	array<float, 3> Precision = { 0 };
-	array<float, 3> Accuracy = { 0 };
-	array<float, 3> Fscore = { 0 };
+	//array<float, 3> FPrate = { 0 };
+	//array<float, 3> TPrate = { 0 };
+	//array<float, 3> Precision = { 0 };
+	//array<float, 3> Accuracy = { 0 };
+	//array<float, 3> Fscore = { 0 };
+	array<pmetrics, 3> metrics;
 
 	for(int i=0;i<pred.rows; ++i)
 	{
@@ -383,11 +394,11 @@ void calcResults(Mat pred, Mat resp, string resFilename)
 
 	for (int i = 0; i < 3; ++i)
 	{
-		FPrate[i] = FalsePositive[i] / ((float)(FalsePositive[i] + TrueNegative[i]));
-		TPrate[i] = TruePositive[i] / ((float)(TruePositive[i] + FalseNegative[i]));
-		Precision[i] = TruePositive[i] / ((float)(TruePositive[i] + FalsePositive[i]));
-		Fscore[i] = Precision[i] * TPrate[i];
-		Accuracy[i] = (TruePositive[i] + TrueNegative[i]) / ((float)(TruePositive[i] + FalsePositive[i] + FalseNegative[i] + TrueNegative[i]));
+		metrics[i].FPrate = FalsePositive[i] / ((float)(FalsePositive[i] + TrueNegative[i]));
+		metrics[i].TPrate = TruePositive[i] / ((float)(TruePositive[i] + FalseNegative[i]));
+		metrics[i].Precision = TruePositive[i] / ((float)(TruePositive[i] + FalsePositive[i]));
+		metrics[i].Fscore = metrics[i].Precision * metrics[i].TPrate;
+		metrics[i].Accuracy = (TruePositive[i] + TrueNegative[i]) / ((float)(TruePositive[i] + FalsePositive[i] + FalseNegative[i] + TrueNegative[i]));
 	}
 
 	
@@ -401,11 +412,11 @@ void calcResults(Mat pred, Mat resp, string resFilename)
 		cout << FalseNegative[i] << "\t" << TrueNegative[i] << endl;
 		cout << endl;
 
-		cout << "FP rate: " << FPrate[i] << endl;
-		cout << "TP rate: " << TPrate[i] << endl;
-		cout << "Precision: " << Precision[i] << endl;
-		cout << "F-score: " << Fscore[i] << endl;
-		cout << "Accuracy: " << Accuracy[i] << endl;
+		cout << "FP rate: " << metrics[i].FPrate << endl;
+		cout << "TP rate: " << metrics[i].TPrate << endl;
+		cout << "Precision: " << metrics[i].Precision << endl;
+		cout << "F-score: " << metrics[i].Fscore << endl;
+		cout << "Accuracy: " << metrics[i].Accuracy << endl;
 		cout << endl;
 	}
 
@@ -419,11 +430,11 @@ void calcResults(Mat pred, Mat resp, string resFilename)
 		outfile << FalseNegative[i] << "\t" << TrueNegative[i] << endl;
 		outfile << endl;
 
-		outfile << "FP rate: " << FPrate[i] << endl;
-		outfile << "TP rate: " << TPrate[i] << endl;
-		outfile << "Precision: " << Precision[i] << endl;
-		outfile << "F-score: " << Fscore[i] << endl;
-		outfile << "Accuracy: " << Accuracy[i] << endl;
+		outfile << "FP rate: " << metrics[i].FPrate << endl;
+		outfile << "TP rate: " << metrics[i].TPrate << endl;
+		outfile << "Precision: " << metrics[i].Precision << endl;
+		outfile << "F-score: " << metrics[i].Fscore << endl;
+		outfile << "Accuracy: " << metrics[i].Accuracy << endl;
 		outfile << endl;
 	}
 
